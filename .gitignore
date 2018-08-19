@@ -1,1 +1,4 @@
 .*
+_tmp/
+channels/
+node_modules/

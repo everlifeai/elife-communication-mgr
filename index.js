@@ -1,6 +1,7 @@
 'use strict'
 const cote = require('cote')
 const pm2 = require('pm2')
+const path = require('path')
 const pkgmgr = require('elife-pkg-mgr')
 const u = require('elife-utils')
 
