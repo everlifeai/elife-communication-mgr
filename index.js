@@ -46,9 +46,8 @@ function startMicroservice(cfg) {
 
     /*      outcome/
      * Responds to a request for adding a new communication channel
-     * TODO: Keep Channel Registry
      */
-    commMgrSvc.on('add', (req, cb) => {
+    commMgrSvc.on('add-channel', (req, cb) => {
         if(!req.pkg) cb('No communication package found')
         else {
             u.showMsg(`Installing ${req.pkg}...`)
@@ -65,6 +64,46 @@ function startMicroservice(cfg) {
         }
     })
 
+    /*      problem/
+     * The avatar suppors a variety of communication channels and so the
+     * various plugins need to be aware of which channel they should
+     * respond to.
+     *
+     *      way/
+     * The channels register themselves to the communication manager
+     * with different keys (it is the channel's responsibility to
+     * generate a unique key). The communication manager then sends
+     * messages to the microservices partitioned by these keys
+     */
+    let channelRegistry = {}
+    commMgrSvc.on('register-channel', (req, cb) => {
+        if(!req.chan) cb('No channel key provided!')
+        else {
+            if(channelRegistry[req.chan]) cb(`Channel ${req.chan} already registered!`)
+            else {
+                channelRegistry[req.chan] = new cote.Requester({
+                    name: 'ComMgr -> ' + req.chan,
+                    key: req.chan,
+                })
+                cb()
+            }
+        }
+    })
+
+    /*      outcome/
+     * The user has sent a message
+     */
+    commMgrSvc.on('message', (req, cb) => {
+        let chan = channelRegistry[req.chan]
+        if(!chan) cb(`Channel ${req.chan} not registered!`)
+        else {
+            chan.send({
+                type: 'reply',
+                ctx: req.ctx,
+                msg: 'Manager says: ' + req.msg,
+            }, cb)
+        }
+    })
 }
 
 function startProcess(cwd, cb) {

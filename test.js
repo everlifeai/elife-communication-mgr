@@ -9,7 +9,7 @@ const client = new cote.Requester({
  * Simple add communication channel test
  */
 function main() {
-    client.send({ type: 'add', pkg: 'everlifeai/elife-telegram' })
+    client.send({ type: 'add-channel', pkg: 'everlifeai/elife-telegram' })
 }
 
 main()
