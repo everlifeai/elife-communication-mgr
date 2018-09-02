@@ -65,45 +65,42 @@ function startMicroservice(cfg) {
     })
 
     /*      problem/
-     * The avatar suppors a variety of communication channels and so the
-     * various plugins need to be aware of which channel they should
-     * respond to.
+     * A user has installed a skill, and it should respond to
+     * appropriate requests.
      *
      *      way/
-     * The channels register themselves to the communication manager
-     * with different keys (it is the channel's responsibility to
-     * generate a unique key). The communication manager then sends
-     * messages to the microservices partitioned by these keys
+     * The skill registers itself which allows the communication manager
+     * to send communications to it.
      */
-    let channelRegistry = {}
-    commMgrSvc.on('register-channel', (req, cb) => {
-        if(!req.chan) cb('No channel key provided!')
-        else {
-            if(channelRegistry[req.chan]) cb(`Channel ${req.chan} already registered!`)
-            else {
-                channelRegistry[req.chan] = new cote.Requester({
-                    name: 'ComMgr -> ' + req.chan,
-                    key: req.chan,
-                })
-                cb()
-            }
-        }
+    let skillRegistry = []
+    commMgrSvc.on('register-skill', (req, cb) => {
+        skillRegistry.push(req)
+        cb(null)
     })
 
+
     /*      outcome/
-     * The user has sent a message
+     * The user has sent a message so send a reply
      */
     commMgrSvc.on('message', (req, cb) => {
-        let chan = channelRegistry[req.chan]
-        if(!chan) cb(`Channel ${req.chan} not registered!`)
-        else {
-            chan.send({
-                type: 'reply',
-                ctx: req.ctx,
-                msg: 'Manager says: ' + req.msg,
-            }, cb)
-        }
+        sendReply(req.chan, {
+            type: 'reply',
+            ctx: req.ctx,
+            msg: 'Manager says: ' + req.msg,
+        }, cb)
     })
+}
+
+let workq = new cote.Requester({
+    name: 'ComMgr -> Work Queue',
+    key: 'everlife-workq-svc',
+})
+function sendReply(chan, rep, cb) {
+    workq.send({
+        type: 'q',
+        q: chan,
+        data: rep,
+    }, cb)
 }
 
 function startProcess(cwd, cb) {
@@ -119,4 +116,3 @@ function startProcess(cwd, cb) {
 }
 
 main()
-
