@@ -91,10 +91,18 @@ function startMicroservice(cfg) {
     })
 }
 
+
+/*      understand/
+ * The queue microservice manages task queues
+ */
 let workq = new cote.Requester({
     name: 'ComMgr -> Work Queue',
     key: 'everlife-workq-svc',
 })
+/*      outcome/
+ * Use the queue microservice to properly stack messages for each
+ * channel.
+ */
 function sendReply(chan, rep, cb) {
     workq.send({
         type: 'q',
