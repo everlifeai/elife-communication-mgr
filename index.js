@@ -136,6 +136,7 @@ function registerMsgHandler(req, cb) {
  * If the user has been interacting with a particular skill, it gets the
  * first chance of responding (continuing the conversation). If not, we
  * go through all registered skills and see if any of them respond.
+ * Finally we try the AI to see if it can give us a response.
  *
  * TODO: Note that this implies that we can only handle/respond to one
  * user.
@@ -153,7 +154,7 @@ function handleReply(req, cb) {
     } else check_handler_ndx_1(0)
 
     function check_handler_ndx_1(ndx) {
-        if(ndx >= msgHandlerRegistry.length) cb()
+        if(ndx >= msgHandlerRegistry.length) askAIForHelp(req, cb)
         else {
             isHandling(msgHandlerRegistry[ndx], req, (err,handling) => {
                 if(err) u.showErr(err)
@@ -166,6 +167,26 @@ function handleReply(req, cb) {
             })
         }
     }
+}
+
+const client = new cote.Requester({
+    name: 'CommMgr -> AI Brain',
+    key: 'everlife-ai-svc',
+})
+
+function askAIForHelp(req, cb) {
+    client.send({ type: 'get-response', msg: req.msg }, (err, msg) => {
+        if(err) cb(err)
+        else {
+            if(!msg) cb()
+            else {
+                sendReply(msg, req, (err) => {
+                    if(err) cb(err)
+                    else cb(null, true)
+                })
+            }
+        }
+    })
 }
 
 function isHandling(skill, req, cb) {
