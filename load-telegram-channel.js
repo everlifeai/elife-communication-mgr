@@ -1,7 +1,7 @@
 'use strict'
 const cote = require('cote')
 const client = new cote.Requester({
-    name: 'Test CommMgr Client',
+    name: 'Telegram CommMgr Client',
     key: 'everlife-communication-svc',
 })
 
