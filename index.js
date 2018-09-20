@@ -4,7 +4,7 @@ const pm2 = require('pm2')
 const path = require('path')
 const pkgmgr = require('elife-pkg-mgr')
 const u = require('elife-utils')
-
+const fs = require('fs')
 
 /*      understand/
  * This is the main entry point where we start.
@@ -15,6 +15,9 @@ const u = require('elife-utils')
 function main() {
     let conf = loadConfig()
     startMicroservice(conf)
+    startChannelsInFolder(conf,(err)=>{
+        if(err) console.log(err)
+    })
 }
 
 /*      outcome/
@@ -228,6 +231,29 @@ function startProcess(cwd, cb) {
         log: lg,
     }
     pm2.start(opts, cb)
+}
+
+/**
+ * /outcome
+ * starting the installed channel service.
+ */
+function startChannelsInFolder(cfg,cb){
+
+    fs.readdir(cfg.CHANNEL_FOLDER,function(err,files){
+        for(const file of files){
+            const loc = path.join(cfg.CHANNEL_FOLDER,file)
+            if(fs.lstatSync(loc).isDirectory()){
+                if(err) u.showErr(err)
+                else {
+                    console.log(`Starting ${file}...`)
+                    pm2.connect((err) => {
+                        if(err) cb(err)
+                        else startProcess(loc, cb)
+                    })
+                }
+            }
+        }
+    })
 }
 
 main()
