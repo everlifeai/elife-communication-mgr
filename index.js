@@ -240,16 +240,19 @@ function startProcess(cwd, cb) {
 function startChannelsInFolder(cfg,cb){
 
     fs.readdir(cfg.CHANNEL_FOLDER,function(err,files){
-        for(const file of files){
-            const loc = path.join(cfg.CHANNEL_FOLDER,file)
-            if(fs.lstatSync(loc).isDirectory()){
-                if(err) u.showErr(err)
-                else {
-                    console.log(`Starting ${file}...`)
-                    pm2.connect((err) => {
-                        if(err) cb(err)
-                        else startProcess(loc, cb)
-                    })
+        if(err) cb(err)
+        else{
+            for(const file of files){
+                const loc = path.join(cfg.CHANNEL_FOLDER,file)
+                if(fs.lstatSync(loc).isDirectory()){
+                    if(err) u.showErr(err)
+                    else {
+                        console.log(`Starting ${file}...`)
+                        pm2.connect((err) => {
+                            if(err) cb(err)
+                            else startProcess(loc, cb)
+                        })
+                    }
                 }
             }
         }
