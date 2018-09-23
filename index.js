@@ -147,7 +147,7 @@ function registerMsgHandler(req, cb) {
 let CURRENT_HANDLER
 function handleReply(req, cb) {
     if(CURRENT_HANDLER) {
-        isHandling(CURRENT_HANDLER, req, (err,handling) => {
+        isHandling(CURRENT_HANDLER, req, (err, handling) => {
             if(err) u.showErr(err)
             else {
                 if(handling) cb(null, true)
