@@ -33,7 +33,7 @@ function loadConfig() {
     return cfg;
 }
 
-
+let LAST_REQ
 function startMicroservice(cfg) {
 
     /*      understand/
@@ -88,6 +88,7 @@ function startMicroservice(cfg) {
         else {
             if(!req.ctx) cb(`Request missing context! ${req}`)
             else {
+                LAST_REQ = req
                 if(!req.msg) cb()
                 else handleReply(req, (err, handling) => {
                     // TODO: Error messaging (especially object dumps) need to
@@ -116,6 +117,15 @@ function startMicroservice(cfg) {
             }
         }
     })
+
+    /*      outcome/
+     * Reply on the last channel the user used to communicate with us
+     */
+    commMgrSvc.on('reply-on-last-channel', (req, cb) => {
+        if(LAST_REQ) sendReply(req.msg, LAST_REQ, cb)
+        else cb('No last channel found to reply on!') //TODO: Store last channel information in DB?
+    })
+
 }
 
 let msgHandlerRegistry = []
