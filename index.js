@@ -18,6 +18,7 @@ function main() {
     startChannelsInFolder(conf,(err)=>{
         if(err) console.log(err)
     })
+    setLastReqChannel()
 }
 
 /*      outcome/
@@ -89,6 +90,7 @@ function startMicroservice(cfg) {
             if(!req.ctx) cb(`Request missing context! ${req}`)
             else {
                 LAST_REQ = req
+                saveLastReqChannel(req)
                 if(!req.msg) cb()
                 else handleReply(req, (err, handling) => {
                     // TODO: Error messaging (especially object dumps) need to
@@ -266,6 +268,25 @@ function startChannelsInFolder(cfg,cb){
                 }
             }
         }
+    })
+}
+
+const levelDBClient = new cote.Requester({
+    name: 'Communicaion mgr DB client',
+    key: 'everlife-db-svc',
+})
+
+function saveLastReqChannel(reqChannel){
+
+    levelDBClient.send({ type: 'put', key: 'last-req-channel', val: reqChannel }, (err) => {
+        if(err) u.showErr(err)
+    })
+}
+
+function setLastReqChannel(){
+    levelDBClient.send({ type: 'get', key: 'last-req-channel' }, (err,val) => {
+        if(err) u.showErr(err)
+        else LAST_REQ = val
     })
 }
 
