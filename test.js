@@ -1,5 +1,5 @@
 'use strict'
-const cote = require('cote')
+const cote = require('cote')({statusLogsEnabled:false})
 const client = new cote.Requester({
     name: 'Test CommMgr Client',
     key: 'everlife-communication-svc',
