@@ -90,6 +90,7 @@ function startMicroservice(cfg) {
             else {
                 LAST_REQ = req
                 if(!req.msg) cb()
+                else if(req.msg == '/help') showHelp(req, cb)
                 else handleReply(req, (err, handling) => {
                     // TODO: Error messaging (especially object dumps) need to
                     // be designed better
@@ -112,7 +113,7 @@ function startMicroservice(cfg) {
         else {
             if(!req.ctx) cb(`Request missing context! ${req}`)
             else {
-                if(!req.msg) cb()
+                if(req.msg === null || req.msg === undefined || req.msg.length == 0) cb()
                 else sendReply(req.msg, req, cb)
             }
         }
@@ -129,16 +130,39 @@ function startMicroservice(cfg) {
 }
 
 let msgHandlerRegistry = []
+let helps = []
 function registerMsgHandler(req, cb) {
-    if(!req.mskey || !req.mstype) cb(`mskey & mstype needed to register msg handler`)
+    if(!req.mskey || !req.mstype) cb(`mskey(${req.mskey}) & mstype(${req.mstype}) needed to register msg handler`)
     else {
-        let client = new cote.Requester({
-            name: `CommMgr -> ${req.mskey}`,
-            key: req.mskey,
-        })
-        msgHandlerRegistry.push({client: client, mstype: req.mstype})
-        cb(null)
+        if(!addHelp(req.mshelp)) cb(`${req.mskey} Help command and text (mshelp) needed to register msg handler`)
+        else {
+            let client = new cote.Requester({
+                name: `CommMgr -> ${req.mskey}`,
+                key: req.mskey,
+            })
+            msgHandlerRegistry.push({client: client, mstype: req.mstype})
+            cb(null)
+        }
     }
+}
+
+function addHelp(mshelp) {
+    if(!mshelp || !mshelp.length) return
+    for(let i = 0;i < mshelp.length;i++) {
+        let h = mshelp[i]
+        if(!h.cmd || h.cmd[0] != '/' || !h.txt) return
+        helps.push(h)
+    }
+    return true
+}
+
+function showHelp(req, cb) {
+    let txt = "/help: show this help\n";
+    for(let i = 0;i < helps.length;i++) {
+        let h = helps[i]
+        txt += `${h.cmd}: ${h.txt}\n`
+    }
+    sendReply(txt, req, (err) => { cb(err, true) })
 }
 
 /*      understand/
