@@ -15,6 +15,7 @@ const fs = require('fs')
 function main() {
     let conf = loadConfig()
     startMicroservice(conf)
+    getLastReqChannel()
     startChannelsInFolder(conf,(err)=>{
         if(err) console.log(err)
     })
@@ -89,6 +90,7 @@ function startMicroservice(cfg) {
             if(!req.ctx) cb(`Request missing context! ${req}`)
             else {
                 LAST_REQ = req
+                saveLastReqChannel(req)
                 if(!req.msg) cb()
                 else if(req.msg == '/help') showHelp(req, cb)
                 else handleReply(req, (err, handling) => {
@@ -289,6 +291,38 @@ function startChannelsInFolder(cfg,cb){
                     }
                 }
             }
+        }
+    })
+}
+
+
+
+const levelDBClient = new cote.Requester({
+    name: 'Communicaion mgr DB client',
+    key: 'everlife-db-svc',
+})
+
+const LAST_REQ_CHANNEL = 'LAST_REQ_CHANNEL'
+/**
+ *  /outcome
+ * Saving the last request channel in LevelDB
+ */
+function saveLastReqChannel(reqChannel){
+    let val = JSON.stringify({chan:reqChannel.chan,ctx:reqChannel.ctx})
+    levelDBClient.send({ type: 'put', key: LAST_REQ_CHANNEL, val: val }, (err) => {
+        if(err) u.showErr(err)
+    })
+}
+
+/**
+ *  /outcome
+ * Fetching last request channel from LevelDB and then setting LAST_REQ
+ */
+function getLastReqChannel(){
+    levelDBClient.send({ type: 'get', key: LAST_REQ_CHANNEL }, (err,val) => {
+        if(err) u.showErr(err)
+        else{ 
+             LAST_REQ = JSON.parse(val)
         }
     })
 }
