@@ -99,7 +99,7 @@ function startMicroservice(cfg) {
                     if(err) cb(`Error! ${err}`)
                     else {
                         if(handling) cb()
-                        else sendReply(`I'm sorry - I did not understand: ${req.msg}`, req, cb)
+                        else sendReply(`I'm sorry - I did not understand: ${req.msg}`, null, req, cb)
                     }
                 })
             }
@@ -115,17 +115,21 @@ function startMicroservice(cfg) {
         else {
             if(!req.ctx) cb(`Request missing context! ${req}`)
             else {
-                if(req.msg === null || req.msg === undefined || req.msg.length == 0) cb()
-                else sendReply(req.msg, req, cb)
+                if(isEmpty(req.msg) && isEmpty(req.addl)) cb()
+                else sendReply(req.msg, req.addl, req, cb)
             }
         }
     })
+
+    function isEmpty(x) {
+        return x === null || x === undefined || x.length == 0
+    }
 
     /*      outcome/
      * Reply on the last channel the user used to communicate with us
      */
     commMgrSvc.on('reply-on-last-channel', (req, cb) => {
-        if(LAST_REQ) sendReply(req.msg, LAST_REQ, cb)
+        if(LAST_REQ) sendReply(req.msg, req.addl, LAST_REQ, cb)
         else cb('No last channel found to reply on!') //TODO: Store last channel information in DB?
     })
 
@@ -164,7 +168,7 @@ function showHelp(req, cb) {
         let h = helps[i]
         txt += `${h.cmd}: ${h.txt}\n`
     }
-    sendReply(txt, req, (err) => { cb(err, true) })
+    sendReply(txt, null, req, (err) => { cb(err, true) })
 }
 
 /*      understand/
@@ -219,7 +223,7 @@ function askAIForHelp(req, cb) {
         else {
             if(!msg) cb()
             else {
-                sendReply(msg, req, (err) => {
+                sendReply(msg, null, req, (err) => {
                     if(err) cb(err)
                     else cb(null, true)
                 })
@@ -245,7 +249,7 @@ let workq = new cote.Requester({
  * Use the queue microservice to properly stack messages for each
  * channel.
  */
-function sendReply(msg, req, cb) {
+function sendReply(msg, addl, req, cb) {
     workq.send({
         type: 'q',
         q: req.chan,
@@ -253,6 +257,7 @@ function sendReply(msg, req, cb) {
             type: 'reply',
             ctx: req.ctx,
             msg: msg,
+            addl: addl,
         },
     }, cb)
 }
