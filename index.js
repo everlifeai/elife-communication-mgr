@@ -239,26 +239,31 @@ function isHandling(skill, req, cb) {
 
 
 /*      understand/
- * The queue microservice manages task queues
+ * We keep a set of channel microservices that we can use to communicate
+ * back with our channels.
  */
-let workq = new cote.Requester({
-    name: 'ComMgr -> Work Queue',
-    key: 'everlife-workq-svc',
-})
+let channels = {}
+function getChannel(chan) {
+    if(!channels[chan]) {
+        channels[chan] = new cote.Requester({
+            name: 'CommMgr -> ${chan}',
+            key: chan,
+        })
+    }
+
+    return channels[chan]
+}
+
 /*      outcome/
- * Use the queue microservice to properly stack messages for each
- * channel.
+ * Send a reply back on the requestor's channel.
  */
 function sendReply(msg, addl, req, cb) {
-    workq.send({
-        type: 'q',
-        q: req.chan,
-        data: {
-            type: 'reply',
-            ctx: req.ctx,
-            msg: msg,
-            addl: addl,
-        },
+    let chan = getChannel(req.chan)
+    chan.send({
+        type: 'reply',
+        ctx: req.ctx,
+        msg: msg,
+        addl: addl,
     }, cb)
 }
 
