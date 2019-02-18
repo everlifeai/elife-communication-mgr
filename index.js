@@ -17,7 +17,7 @@ function main() {
     startMicroservice(conf)
     getLastReqChannel()
     startChannelsInFolder(conf,(err)=>{
-        if(err) console.log(err)
+        if(err) u.showErr(err)
     })
 }
 
@@ -293,7 +293,7 @@ function startChannelsInFolder(cfg,cb){
                 if(fs.lstatSync(loc).isDirectory()){
                     if(err) u.showErr(err)
                     else {
-                        console.log(`Starting ${file}...`)
+                        u.showMsg(`Starting ${file}...`)
                         pm2.connect((err) => {
                             if(err) cb(err)
                             else startProcess(loc, cb)
