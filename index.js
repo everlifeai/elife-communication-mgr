@@ -107,6 +107,26 @@ function startMicroservice(cfg) {
     })
 
     /*      outcome/
+     * Someone (not our user) has sent us a message so respond with any
+     * info that the avatar is willing to share.
+     */
+    commMgrSvc.on('not-owner-message', (req, cb) => {
+        if(!req.chan) cb(`Request missing channel! ${req}`)
+        else {
+            if(!req.ctx) cb(`Request missing context! ${req}`)
+            else {
+                handleInfoReq(req, (err, handling) => {
+                    if(err) cb(`Error! ${err}`)
+                    else {
+                        if(handling) cb()
+                        else sendReply(`I'm sorry - I did not understand: ${req.msg}`, null, req, cb)
+                    }
+                })
+            }
+        }
+    })
+
+    /*      outcome/
      * We have a reply for the user so we call the correct channel with
      * the reply
      */
@@ -188,7 +208,7 @@ let CURRENT_HANDLER
 function handleReply(req, cb) {
     if(CURRENT_HANDLER) {
         isHandling(CURRENT_HANDLER, req, (err, handling) => {
-            if(err) u.showErr(err)
+            if(err) cb(err)
             else {
                 if(handling) cb(null, true)
                 else check_handler_ndx_1(0)
@@ -212,13 +232,32 @@ function handleReply(req, cb) {
     }
 }
 
+/*      outcome/
+ * If it is not the owner, we only respond from the KB
+ */
+function handleInfoReq(req, cb) {
+    askAIForKB(req, cb)
+}
+
 const client = new cote.Requester({
     name: 'CommMgr -> AI Brain',
     key: 'everlife-ai-svc',
 })
 
 function askAIForHelp(req, cb) {
-    client.send({ type: 'get-response', msg: req.msg }, (err, msg) => {
+    handleAImsReq(req, 'get-response', cb)
+}
+
+function askAIForKB(req, cb) {
+    handleAImsReq(req, 'get-kb-response', cb)
+}
+
+/*      outcome/
+ * Make a request to the AI microservice - if we get a response then we
+ * handle it otherwise say we are not able to
+ */
+function handleAImsReq(req, type_, cb) {
+    client.send({ type: type_, msg: req.msg }, (err, msg) => {
         if(err) cb(err)
         else {
             if(!msg) cb()
