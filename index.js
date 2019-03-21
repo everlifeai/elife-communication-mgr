@@ -211,14 +211,25 @@ function registerMsgHandler(req, cb) {
     else {
         if(!addHelp(req.mshelp)) cb(`${req.mskey} Help command and text (mshelp) needed to register msg handler`)
         else {
-            let client = new cote.Requester({
-                name: `CommMgr -> ${req.mskey}`,
-                key: req.mskey,
-            })
-            msgHandlerRegistry.push({client: client, mstype: req.mstype})
-            cb(null)
+            if (!isRegistered(req.mskey)) {
+                let client = new cote.Requester({
+                    name: `CommMgr -> ${req.mskey}`,
+                    key: req.mskey,
+                })
+                msgHandlerRegistry.push({client: client, mstype: req.mstype, mskey: req.mskey})
+                cb(null)
+            }
         }
     }
+}
+
+function isRegistered(mskey) {
+    for (let i=0; i<msgHandlerRegistry.length; i++) {
+        if (msgHandlerRegistry[i].mskey === mskey) {
+            return true;
+        }
+    }
+    return false;
 }
 
 function addHelp(mshelp) {
