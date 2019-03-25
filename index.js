@@ -15,9 +15,11 @@ const fs = require('fs')
 function main() {
     let conf = loadConfig()
     startMicroservice(conf)
-    getLastReqChannel()
-    startChannelsInFolder(conf,(err)=>{
+    setLastReqChannel((err) => {
         if(err) u.showErr(err)
+        startChannelsInFolder(conf,(err)=>{
+            if(err) u.showErr(err)
+        })
     })
 }
 
@@ -33,6 +35,12 @@ function loadConfig() {
     }
     return cfg;
 }
+
+
+const ssbClient = new cote.Requester({
+    name: 'CommMgr -> SSB',
+    key: 'everlife-ssb-svc',
+})
 
 let LAST_REQ
 function startMicroservice(cfg) {
@@ -81,7 +89,10 @@ function startMicroservice(cfg) {
 
 
     /*      outcome/
-     * The user has sent a message so we see if any component can handle
+     * The user has sent a message so we check it and standardize it,
+     * save the last request channel, and then try to handle it.
+     *
+     * see if any component can handle
      * it otherwise we reply that we didn't understand.
      */
     commMgrSvc.on('message', (req, cb) => {
@@ -90,21 +101,37 @@ function startMicroservice(cfg) {
             if(!req.ctx) cb(`Request missing context! ${req}`)
             else {
                 LAST_REQ = req
-                saveLastReqChannel(req)
-                if(!req.msg) cb()
-                else if(req.msg == '/help') showHelp(req, cb)
-                else handleReply(req, (err, handling) => {
-                    // TODO: Error messaging (especially object dumps) need to
-                    // be designed better
-                    if(err) cb(`Error! ${err}`)
-                    else {
-                        if(handling) cb()
-                        else sendReply(`I'm sorry - I did not understand: ${req.msg}`, null, req, cb)
-                    }
+                saveLastReqChannel(req, (err) => {
+                    if(err) u.showErr(err)
+                    stdMsg(req, (err, req) => {
+                        if(err) cb(err)
+                        else handleReq(req, cb)
+                    })
                 })
             }
         }
     })
+
+    /*      outcome/
+     * If the request is for `/help` we show the help otherwise we check
+     * if anyone can handle the reply. If someone informed us that they
+     * can we finish the cycle - they will reply when they want.
+     * Otherwise it is our unfortunate duty to inform the user that we
+     * did not understand them.
+     */
+    function handleReq(req, cb) {
+        if(!req.msg) cb()
+        else if(req.msg == '/help') showHelp(req, cb)
+        else handleReply(req, (err, handling) => {
+            // TODO: Error messaging (especially object dumps) need to
+            // be designed better
+            if(err) cb(`Error! ${err}`)
+            else {
+                if(handling) cb()
+                else sendReply(`I'm sorry - I did not understand: ${req.msg}`,null,req,cb)
+            }
+        })
+    }
 
     /*      outcome/
      * Someone (not our user) has sent us a message so respond with any
@@ -136,7 +163,11 @@ function startMicroservice(cfg) {
             if(!req.ctx) cb(`Request missing context! ${req}`)
             else {
                 if(isEmpty(req.msg) && isEmpty(req.addl)) cb()
-                else sendReply(req.msg, req.addl, req, cb)
+                else {
+                    stdReply(req, (err, req) => {
+                        sendReply(req.msg, req.addl, req, cb)
+                    })
+                }
             }
         }
     })
@@ -262,9 +293,12 @@ function handleAImsReq(req, type_, cb) {
         else {
             if(!msg) cb()
             else {
-                sendReply(msg, null, req, (err) => {
-                    if(err) cb(err)
-                    else cb(null, true)
+                req.msg = msg
+                stdReply(req, (err, req) => {
+                    sendReply(req.msg, req.addl, req, (err) => {
+                        if(err) cb(err)
+                        else cb(null, true)
+                    })
                 })
             }
         }
@@ -356,24 +390,109 @@ const LAST_REQ_CHANNEL = 'LAST_REQ_CHANNEL'
  *  /outcome
  * Saving the last request channel in LevelDB
  */
-function saveLastReqChannel(reqChannel){
+function saveLastReqChannel(reqChannel, cb){
     let val = JSON.stringify({chan:reqChannel.chan,ctx:reqChannel.ctx})
-    levelDBClient.send({ type: 'put', key: LAST_REQ_CHANNEL, val: val }, (err) => {
-        if(err) u.showErr(err)
-    })
+    levelDBClient.send({ type: 'put', key: LAST_REQ_CHANNEL, val: val }, cb)
 }
 
 /**
  *  /outcome
  * Fetching last request channel from LevelDB and then setting LAST_REQ
  */
-function getLastReqChannel(){
+function setLastReqChannel(cb){
     levelDBClient.send({ type: 'get', key: LAST_REQ_CHANNEL }, (err,val) => {
-        if(err) u.showErr(err)
-        else{ 
-             LAST_REQ = JSON.parse(val)
+        if(err) cb(err)
+        else{
+            try {
+                LAST_REQ = JSON.parse(val)
+                cb()
+            } catch(e) {
+                cb(e)
+            }
         }
     })
 }
+
+/*      problem/
+ * Messages that contain byte data are to be stored as blobs with
+ * references in the actual message text.
+ *
+ *      way/
+ * Check if the message contains addl.bytes and save it as a message
+ * reference with this format:
+ *      ref:type:"mime type":blobreference
+ *
+ * All other messages are just passed through
+ */
+function stdMsg(req, cb) {
+    if(!req.msg && req.addl && req.addl.bytes) {
+        save_as_blob_msg_1(req, cb)
+    } else {
+        cb(null, req)
+    }
+
+    function save_as_blob_msg_1(req, cb) {
+        let bytes = req.addl.bytes
+        if(!bytes.length) cb(null, req)
+        else {
+            ssbClient.send({type:'blob-save-array',bytes:bytes}, (err,hash) => {
+                if(err) cb(err)
+                else {
+                    req.msg = `ref:${req.addl.type}:"${req.addl.mime}":${hash}`
+                    cb(null, req)
+                }
+            })
+        }
+    }
+}
+
+/*      outcome/
+ * When given message we check if it is of the form -
+ *      ref:type:"mime type":blobreference
+ * by extracting the various parts. If it is, we fetch the blob and
+ * construct the additional message information from it.
+ */
+function stdReply(req, cb) {
+    xtract_addl_1(req, (err, addl) => {
+        if(addl) {
+            req.msg = null
+            req.addl = addl
+        }
+        cb(err, req)
+    })
+
+    function xtract_addl_1(req, cb) {
+        let msg = req.msg
+        let r = {}
+        let s = "ref:"
+        if(!msg.startsWith(s)) return cb()
+        let i = msg.indexOf(':', s.length)
+        r.type = msg.substring(s.length, i)
+        i++
+        if(msg[i] != '"') return cb()
+        i++
+        let i2 = msg.indexOf('"', i)
+        r.mime = msg.substring(i, i2)
+        i2++
+        if(msg[i2] != ':') return cb()
+        i2++
+        let hash = msg.substring(i2)
+        if(!hash) return cb()
+        ssbClient.send({type:'blob-load',hash:hash}, (err,blobs) => {
+            if(err) cb(err)
+            else {
+                let blob = blobs[0]
+                if(!blob) {
+                    cb(`Blob ${hash} not found!`)
+                } else {
+                    r.bytes = blob.data
+                    cb(null, r)
+                }
+            }
+        })
+    }
+}
+
+
 
 main()
