@@ -482,13 +482,12 @@ function stdReply(req, cb) {
         ssbClient.send({type:'blob-load',hash:hash}, (err,blobs) => {
             if(err) cb(err)
             else {
-                let blob = blobs[0]
-                if(!blob) {
-                    cb(`Blob ${hash} not found!`)
-                } else {
-                    r.bytes = blob.data
-                    cb(null, r)
+                let arrs = []
+                for(let i = 0;i < blobs.length;i++) {
+                    arrs.push(blobs[i].data)
                 }
+                r.bytes = [].concat.apply([], arrs)
+                cb(null, r)
             }
         })
     }
