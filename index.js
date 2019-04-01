@@ -294,6 +294,7 @@ function handleAImsReq(req, type_, cb) {
             if(!msg) cb()
             else {
                 req.msg = msg
+                req.addl = undefined
                 stdReply(req, (err, req) => {
                     sendReply(req.msg, req.addl, req, (err) => {
                         if(err) cb(err)
