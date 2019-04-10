@@ -364,15 +364,12 @@ function startChannelsInFolder(cfg,cb){
         else{
             for(const file of files){
                 const loc = path.join(cfg.CHANNEL_FOLDER,file)
-                if(fs.lstatSync(loc).isDirectory()){
-                    if(err) u.showErr(err)
-                    else {
-                        u.showMsg(`Starting ${file}...`)
-                        pm2.connect((err) => {
-                            if(err) cb(err)
-                            else startProcess(loc, cb)
-                        })
-                    }
+                if(fs.lstatSync(loc).isDirectory()) {
+                    u.showMsg(`Starting ${file}...`)
+                    pm2.connect((err) => {
+                        if(err) cb(err)
+                        else startProcess(loc, cb)
+                    })
                 }
             }
         }
