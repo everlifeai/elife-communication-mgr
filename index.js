@@ -96,9 +96,9 @@ function startMicroservice(cfg) {
      * it otherwise we reply that we didn't understand.
      */
     commMgrSvc.on('message', (req, cb) => {
-        if(!req.chan) cb(`Request missing channel! ${req}`)
+        if(!req.chan) cb(`Request missing channel!`, req)
         else {
-            if(!req.ctx) cb(`Request missing context! ${req}`)
+            if(!req.ctx) cb(`Request missing context!`, req)
             else {
                 LAST_REQ = req
                 saveLastReqChannel(req, (err) => {
@@ -155,12 +155,17 @@ function startMicroservice(cfg) {
 
     /*      outcome/
      * We have a reply for the user so we call the correct channel with
-     * the reply
+     * the reply. If the special value, USELASTCHAN is set, we use the
+     * last channel that the user used to communicate with us.
      */
     commMgrSvc.on('reply', (req, cb) => {
-        if(!req.chan) cb(`Request missing channel! ${req}`)
+        if(req.USELASTCHAN && LAST_REQ) {
+            req.chan = LAST_REQ.chan
+            req.ctx = LAST_REQ.ctx
+        }
+        if(!req.chan) cb(`Request missing channel!`, req)
         else {
-            if(!req.ctx) cb(`Request missing context! ${req}`)
+            if(!req.ctx) cb(`Request missing context!`, req)
             else {
                 if(isEmpty(req.msg) && isEmpty(req.addl)) cb()
                 else {
@@ -318,6 +323,7 @@ function isHandling(skill, req, cb) {
  */
 let channels = {}
 function getChannel(chan) {
+    if(!chan) return
     if(!channels[chan]) {
         channels[chan] = new cote.Requester({
             name: 'CommMgr -> ${chan}',
@@ -333,12 +339,16 @@ function getChannel(chan) {
  */
 function sendReply(msg, addl, req, cb) {
     let chan = getChannel(req.chan)
-    chan.send({
-        type: 'reply',
-        ctx: req.ctx,
-        msg: msg,
-        addl: addl,
-    }, cb)
+    if(chan) {
+        chan.send({
+            type: 'reply',
+            ctx: req.ctx,
+            msg: msg,
+            addl: addl,
+        }, cb)
+    } else {
+        u.showErr('No valid reply channel', req)
+    }
 }
 
 function startProcess(cwd, cb) {
