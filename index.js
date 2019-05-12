@@ -67,7 +67,7 @@ function startMicroservice(cfg) {
                 if(err) cb(err)
                 else {
                     u.showMsg(`Starting ${req.pkg}...`)
-                    pm2.connect((err) => {
+                    pm2.connect(true, (err) => {
                         if(err) cb(err)
                         else startProcess(loc, cb)
                     })
@@ -376,7 +376,7 @@ function startChannelsInFolder(cfg,cb){
                 const loc = path.join(cfg.CHANNEL_FOLDER,file)
                 if(fs.lstatSync(loc).isDirectory()) {
                     u.showMsg(`Starting ${file}...`)
-                    pm2.connect((err) => {
+                    pm2.connect(true, (err) => {
                         if(err) cb(err)
                         else startProcess(loc, cb)
                     })
