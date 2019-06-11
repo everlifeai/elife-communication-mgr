@@ -62,8 +62,9 @@ function startMicroservice(cfg) {
     commMgrSvc.on('add-channel', (req, cb) => {
         if(!req.pkg) cb('No communication package found')
         else {
+            let channelfolder = path.join(__dirname, cfg.CHANNEL_FOLDER)
             u.showMsg(`Installing ${req.pkg}...`)
-            pkgmgr.load(req.pkg, cfg.CHANNEL_FOLDER, (err, loc) => {
+            pkgmgr.load(req.pkg, channelfolder, (err, loc) => {
                 if(err) cb(err)
                 else {
                     u.showMsg(`Starting ${req.pkg}...`)
@@ -368,12 +369,12 @@ function startProcess(cwd, cb) {
  * starting the installed channel service.
  */
 function startChannelsInFolder(cfg,cb){
-
-    fs.readdir(cfg.CHANNEL_FOLDER,function(err,files){
+    let channelfolder = path.join(__dirname, cfg.CHANNEL_FOLDER)
+    fs.readdir(channelfolder, function (err,files) {
         if(err) cb(err)
         else{
             for(const file of files){
-                const loc = path.join(cfg.CHANNEL_FOLDER,file)
+                const loc = path.join(channelfolder, file)
                 if(fs.lstatSync(loc).isDirectory()) {
                     u.showMsg(`Starting ${file}...`)
                     pm2.connect(true, (err) => {
