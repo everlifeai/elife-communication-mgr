@@ -17,9 +17,9 @@ function main() {
     startMicroservice(conf)
     setLastReqChannel((err) => {
         if(err) u.showErr(err)
-        startChannelsInFolder(conf,(err)=>{
-            if(err) u.showErr(err)
-        })
+    })
+    startChannelsInFolder(conf,(err)=>{
+        if(err) u.showErr(err)
     })
 }
 
