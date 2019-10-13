@@ -14,6 +14,7 @@ const fs = require('fs')
  */
 function main() {
     let conf = loadConfig()
+    setCoteJSTimeout()
     startMicroservice(conf)
     setLastReqChannel((err) => {
         if(err) u.showErr(err)
@@ -21,6 +22,12 @@ function main() {
     startChannelsInFolder(conf,(err)=>{
         if(err) u.showErr(err)
     })
+}
+
+function setCoteJSTimeout() {
+    if(!process.env['COTE_REQUEST_TIMEOUT']) {
+        process.env['COTE_REQUEST_TIMEOUT'] = 30 * 1000
+    }
 }
 
 /*      outcome/
