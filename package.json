@@ -1,6 +1,6 @@
 {
   "name": "elife-communication-mgr",
-  "version": "1.0.0",
+  "version": "2.0.0",
   "description": "The Everlife Communication Manager",
   "main": "index.js",
   "author": "charles.lobo@gmail.com",
