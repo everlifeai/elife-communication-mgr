@@ -364,6 +364,7 @@ function startProcess(cwd, cb) {
         script: "index.js",
         cwd: cwd,
         log: lg,
+        stripANSI: true,
     }
     pm2.start(opts, cb)
 }
