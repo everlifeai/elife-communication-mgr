@@ -1,6 +1,6 @@
 'use strict'
 const cote = require('cote')({statusLogsEnabled:false})
-const pm2 = require('pm2')
+const pm2 = require('@elife/pm2')
 const path = require('path')
 const pkgmgr = require('@elife/pkg-mgr')
 const u = require('@elife/utils')
@@ -75,10 +75,7 @@ function startMicroservice(cfg) {
                 if(err) cb(err)
                 else {
                     u.showMsg(`Starting ${req.pkg}...`)
-                    pm2.connect(true, (err) => {
-                        if(err) cb(err)
-                        else startProcess(loc, cb)
-                    })
+                    startProcess(loc, cb)
                 }
             })
         }
@@ -384,10 +381,7 @@ function startChannelsInFolder(cfg,cb){
                 const loc = path.join(channelfolder, file)
                 if(fs.lstatSync(loc).isDirectory()) {
                     u.showMsg(`Starting ${file}...`)
-                    pm2.connect(true, (err) => {
-                        if(err) cb(err)
-                        else startProcess(loc, cb)
-                    })
+                    startProcess(loc, cb)
                 }
             }
         }
