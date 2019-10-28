@@ -4,5 +4,16 @@
   "description": "The Everlife Communication Manager",
   "main": "index.js",
   "author": "charles.lobo@gmail.com",
-  "license": "MIT"
+  "license": "MIT",
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/everlifeai/elife-communication-mgr.git"
+  },
+  "bugs": {
+    "url": "https://github.com/everlifeai/elife-communication-mgr/issues"
+  },
+  "homepage": "https://github.com/everlifeai/elife-communication-mgr#readme"
 }
