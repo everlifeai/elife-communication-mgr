@@ -143,6 +143,10 @@ function startMicroservice(cfg) {
      * info that the avatar is willing to share.
      */
     commMgrSvc.on('not-owner-message', (req, cb) => {
+        let addl = {
+            'type':'not-owner-message',
+            'msg' : req.msg
+        }
         if(!req.chan) cb(`Request missing channel! ${req}`)
         else {
             if(!req.ctx) cb(`Request missing context! ${req}`)
@@ -151,12 +155,16 @@ function startMicroservice(cfg) {
                     if(err) cb(`Error! ${err}`)
                     else {
                         if(handling) cb()
-                        else sendReply(`I'm sorry - I did not understand: ${req.msg}`, null, req, cb)
+                        else{
+                            addl['ans'] = false
+                            sendReply(`I'm sorry - I did not understand: ${req.msg}`, addl, req, cb)
+                        } 
                     }
                 })
             }
         }
     })
+
 
     /*      outcome/
      * We have a reply for the user so we call the correct channel with
