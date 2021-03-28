@@ -15,14 +15,5 @@
   "bugs": {
     "url": "https://github.com/everlifeai/elife-communication-mgr/issues"
   },
-  "homepage": "https://github.com/everlifeai/elife-communication-mgr#readme",
-  "dependencies": {
-    "@elife/pkg-mgr": "^4.1.0",
-    "@elife/pm2": "^3.0.0",
-    "@elife/utils": "^2.1.1",
-    "cote": "^1.0.2",
-    "fs": "^0.0.1-security",
-    "path": "^0.12.7"
-  }
-
+  "homepage": "https://github.com/everlifeai/elife-communication-mgr#readme"
 }
