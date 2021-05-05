@@ -165,14 +165,20 @@ function startMicroservice(cfg) {
         else {
             if(!req.ctx) cb(`Request missing context! ${req}`)
             else {
-                handleInfoReq(req, (err, handling) => {
-                    if(err) cb(`Error! ${err}`)
-                    else {
-                        if(handling) cb()
-                        else{
-                            addl['ans'] = false
-                            sendReply(`I'm sorry - I did not understand: ${req.msg}`, addl, req, cb)
-                        } 
+                handleNonOwnerReply(req, (err, handling) => {
+                    if(err || !handling) {
+                        handleInfoReq(req, (err, handling) => {
+                            if(err) cb(`Error! ${err}`)
+                            else {
+                                if(handling) cb()
+                                else {
+                                    addl['ans'] = false
+                                    sendReply(`I'm sorry - I could not respond to: ${req.msg}`, addl, req, cb)
+                                }
+                            }
+                        })
+                    } else {
+                        cb()
                     }
                 })
             }
@@ -219,6 +225,7 @@ function startMicroservice(cfg) {
 }
 
 let msgHandlerRegistry = []
+
 let helps = []
 function registerMsgHandler(req, cb) {
     if(!req.mskey || !req.mstype) cb(`mskey(${req.mskey}) & mstype(${req.mstype}) needed to register msg handler`)
@@ -230,7 +237,7 @@ function registerMsgHandler(req, cb) {
                     name: `CommMgr -> ${req.mskey}`,
                     key: req.mskey,
                 })
-                msgHandlerRegistry.push({client: client, mstype: req.mstype, mskey: req.mskey})
+                msgHandlerRegistry.push({client: client, mstype: req.mstype, mskey: req.mskey, allowNonOwner: req.allowNonOwner})
                 cb(null)
             }
         }
@@ -279,8 +286,8 @@ function showHelp(req, cb) {
  * user.
  */
 let CURRENT_HANDLER
-function handleReply(req, cb) {
-    if(CURRENT_HANDLER) {
+function handleReply_(req, fromOwner, cb) {
+    if(CURRENT_HANDLER && is_supported_1(CURRENT_HANDLER)) {
         isHandling(CURRENT_HANDLER, req, (err, handling) => {
             if(err) cb(err)
             else {
@@ -290,10 +297,17 @@ function handleReply(req, cb) {
         })
     } else check_handler_ndx_1(0)
 
+
+    function is_supported_1(handler) {
+        return fromOwner || handler.allowNonOwner
+    }
+
     function check_handler_ndx_1(ndx) {
         if(ndx >= msgHandlerRegistry.length) askAIForHelp(req, cb)
         else {
-            isHandling(msgHandlerRegistry[ndx], req, (err,handling) => {
+            let handler = msgHandlerRegistry[ndx]
+            if(!is_supported_1(handler)) check_handler_ndx_1(ndx+1)
+            else isHandling(handler, req, (err,handling) => {
                 if(err) u.showErr(err)
                 else {
                     if(handling) {
@@ -305,6 +319,16 @@ function handleReply(req, cb) {
         }
     }
 }
+
+function handleReply(req, cb) {
+    handleReply_(req, true, cb)
+}
+
+function handleNonOwnerReply(req, cb) {
+    handleReply_(req, false, cb)
+}
+
+
 
 /*      outcome/
  * If it is not the owner, we only respond from the KB
