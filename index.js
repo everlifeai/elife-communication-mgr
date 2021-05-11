@@ -388,7 +388,7 @@ function getChannel(chan) {
     if(!chan) return
     if(!channels[chan]) {
         channels[chan] = new cote.Requester({
-            name: 'CommMgr -> ${chan}',
+            name: `CommMgr -> ${chan}`,
             key: chan,
         })
     }
