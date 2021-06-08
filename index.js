@@ -218,12 +218,25 @@ function startMicroservice(cfg) {
      * Reply on the last channel the user used to communicate with us
      */
     commMgrSvc.on('reply-on-last-channel', (req, cb) => {
-        if(LAST_REQ) sendReply(req.msg, req.addl, LAST_REQ, cb)
+        if(LAST_REQ) sendReplyOnLastChannel(req.msg, req.addl, req.ctx, LAST_REQ, cb)
         else cb('No last channel found to reply on!') //TODO: Store last channel information in DB?
     })
 
 }
 
+function sendReplyOnLastChannel(msg, addl, ctx, req, cb) {
+    let chan = getChannel(req.chan)
+    if(chan) {
+        chan.send({
+            type: 'reply',
+            ctx: (ctx ? ctx : req.ctx),
+            msg: msg,
+            addl: addl,
+        }, cb)
+    } else {
+        u.showErr('No valid reply channel', req)
+    }
+}
 let msgHandlerRegistry = []
 
 let helps = []
